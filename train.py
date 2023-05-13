@@ -114,15 +114,15 @@ def accuracy(predictions, labels):
 
 if __name__ == "__main__":
 
-    device = "cpu"  # 初始化為CPU
+    device = torch.device("mps" if torch.backends.mps.is_available else "cpu")  # 初始化為device
 
     total_accuracy = 0
     best_acc = 0
 
     print("是否使用GPU训练：{}".format(torch.backends.mps.is_available()))  # 打印是否采用gpu训练
 
-    if torch.backends.mps.is_available():
-        device = torch.device("mps");  # 打印相应的gpu信息
+    # if torch.backends.mps.is_available():
+    #     device = torch.device("mps");  # 打印相应的gpu信息
 
     normalize = transforms.Normalize(mean=[.5, .5, .5], std=[.5, .5, .5])  # 规范化
     transform = transforms.Compose([  # 数据处理
@@ -212,22 +212,30 @@ if __name__ == "__main__":
                 val_rights = []
 
                 with torch.no_grad():  # 验证数据集时禁止反向传播优化权重
-                    for data in dataloader_test:
-                        imgs, targets = data
+                    for data2 in dataloader_test:
+                        imgs2, targets2 = data2
 
-                        imgs = imgs.to(device)
-                        targets = targets.to(device)
+                        imgs2 = imgs2.to(device)
+                        targets2 = targets2.to(device)
 
-                        outputs = model_ft(imgs)
-                        loss = loss_fn(outputs, targets)
+                        outputs2 = model_ft(imgs2)
+                        loss2 = loss_fn(outputs2, targets2)
 
-                        right = accuracy(outputs, targets)
+                        right = accuracy(outputs2, targets2)
                         val_rights.append(right)
 
                         train_r = (sum(tup[0] for tup in train_rights), sum(tup[1] for tup in train_rights))
                         val_r = (sum(tup[0] for tup in val_rights), sum(tup[1] for tup in val_rights))
 
                         total_accuracy = 100. * val_r[0].cpu().numpy() / val_r[1]
+
+                        del data2
+                        del imgs2
+                        del targets2
+                        del outputs2
+                        del loss2
+
+                        gc.collect()
 
                         # if i % 100 == 0:
                     print('當前epoch: {} [{}/{} ({:.0f}%)]\t損失: {:.6f}\t訓練習準確率: {:.2f}%\t測試習準確率: {:.2f}'.format(
@@ -239,6 +247,7 @@ if __name__ == "__main__":
                         best_acc = total_accuracy
                         torch.save(model_ft, "model.pth")
 
+            del data
             del imgs
             del targets
             del outputs
