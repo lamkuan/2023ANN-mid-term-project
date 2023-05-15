@@ -22,7 +22,7 @@ transform = transforms.Compose([  # 数据处理
     transforms.ToTensor(),
     # transforms.RandomCrop(100),
     # transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter(brightness=1),
+    # transforms.ColorJitter(brightness=1),
     normalize
 ])
 
@@ -171,17 +171,31 @@ class Net(nn.Module):
             nn.MaxPool2d(kernel_size=2),
         )
 
-        self.out = nn.Sequential(
-            nn.Linear(16 * 53 * 53, 120),
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=16,
+                out_channels=32,
+                kernel_size=5,
+            ),
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+        )
+
+        self.out = nn.Sequential(
+            nn.Linear(32 * 24 * 24, 120),
+            nn.ReLU(),
+            # nn.BatchNorm1d(120),
         )
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
+        x = self.conv3(x)
+        # x = self.conv4(x)
+        # x = self.conv5(x)
+        # x = self.conv6(x)
         x = x.view(x.size(0), -1)
-        output = self.out(x)
-
+        output = F.softmax(self.out(x), dim=1)
         return output
 
 
@@ -237,7 +251,7 @@ if __name__ == "__main__":
 
     device = torch.device("mps" if torch.backends.mps.is_available else "cpu")  # 初始化為device
 
-    net = torch.load("model.pth", device)
+    net = torch.load("model3.pth", device)
 
     # net = Net().float().to(device)
 
@@ -245,7 +259,8 @@ if __name__ == "__main__":
     learn_rate = 0.1  # 设置学习率
     optimizer = torch.optim.SGD(net.parameters(), lr=learn_rate, momentum=0.01)  # 可调超参数
 
-    best_acc = 7.29
+    best_acc = 8.85
+    # best_acc = -1
     total_accuracy = 0
 
     for epoch in range(num_epochs):
@@ -292,5 +307,5 @@ if __name__ == "__main__":
                     if best_acc < total_accuracy:
                         print("已修改模型")
                         best_acc = total_accuracy
-                        torch.save(net, "model.pth")
+                        torch.save(net, "model3.pth")
 

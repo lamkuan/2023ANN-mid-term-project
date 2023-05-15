@@ -22,7 +22,7 @@ transform = transforms.Compose([  # 数据处理
     transforms.ToTensor(),
     # transforms.RandomCrop(100),
     # transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter(brightness=1),
+    # transforms.ColorJitter(brightness=1),
     normalize
 ])
 
@@ -159,6 +159,7 @@ class Net(nn.Module):
             ),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
+            nn.BatchNorm2d(6),
         )
 
         self.conv2 = nn.Sequential(
@@ -169,19 +170,70 @@ class Net(nn.Module):
             ),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
+            nn.BatchNorm2d(16),
         )
 
-        self.out = nn.Sequential(
-            nn.Linear(16 * 53 * 53, 120),
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=16,
+                out_channels=32,
+                kernel_size=5,
+            ),
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.BatchNorm2d(32),
+        )
+
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=32,
+                out_channels=64,
+                kernel_size=5,
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.BatchNorm2d(64),
+        )
+
+        # self.conv5 = nn.Sequential(
+        #     nn.Conv2d(
+        #         in_channels=32,
+        #         out_channels=64,
+        #         kernel_size=5,
+        #     ),
+        #     nn.ReLU(),
+        #     nn.MaxPool2d(kernel_size=2),
+        #     nn.BatchNorm2d(64),
+        # )
+
+        self.out = nn.Sequential(
+            nn.Linear(64 * 3 * 3, 120),
+            nn.ReLU(),
+            # nn.BatchNorm1d(120),
+        )
+
+        self.fc2 = self.out = nn.Sequential(
+            nn.Linear(120, 84),
+            nn.ReLU(),
+            # nn.BatchNorm1d(120),
+        )
+
+        self.fc3 = self.out = nn.Sequential(
+            nn.Linear(84, 500),
+            nn.ReLU(),
+            # nn.BatchNorm1d(120),
         )
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
         x = x.view(x.size(0), -1)
-        output = self.out(x)
-
+        x = self.out(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
+        output = F.softmax()
         return output
 
 
@@ -237,7 +289,7 @@ if __name__ == "__main__":
 
     device = torch.device("mps" if torch.backends.mps.is_available else "cpu")  # 初始化為device
 
-    net = torch.load("model.pth", device)
+    net = torch.load("model5.pth", device)
 
     # net = Net().float().to(device)
 
@@ -245,7 +297,8 @@ if __name__ == "__main__":
     learn_rate = 0.1  # 设置学习率
     optimizer = torch.optim.SGD(net.parameters(), lr=learn_rate, momentum=0.01)  # 可调超参数
 
-    best_acc = 7.29
+    best_acc = 14.58
+    # best_acc = -1
     total_accuracy = 0
 
     for epoch in range(num_epochs):
@@ -292,5 +345,5 @@ if __name__ == "__main__":
                     if best_acc < total_accuracy:
                         print("已修改模型")
                         best_acc = total_accuracy
-                        torch.save(net, "model.pth")
+                        torch.save(net, "model5.pth")
 
